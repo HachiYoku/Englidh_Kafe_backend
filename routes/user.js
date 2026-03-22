@@ -1,24 +1,22 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
+const validateToken = require('../middleware/authMiddleware');
+const { getProfile, updateProfile, deletAccount } = require('../controllers/userController');
+const upload = multer({ storage: multer.memoryStorage() });
 
 // middleware that is specific to this router
 router.use((req, res, next) => {
  console.log('Time: ', Date.now())
  next()
 })
-GET /api/user/profile
-PUT /api/user/profile
-DELETE /api/user/account
-GET /api/user/my-courses
 
-router.get('/profile', (req, res) => {
-  res.send('User Profile endpoint')
-})
 
-router.put('/profile', (req, res) => {
-  res.send('Update User Profile endpoint')
-})
+router.get('/profile', validateToken, getProfile)
 
-router.delete('/account', (req, res) => {
-  res.send('Delete User Account endpoint')
-})
+router.put('/profile', validateToken, upload.single('avatar'), updateProfile)
+
+router.delete('/account', validateToken, deletAccount)
+
+
+module.exports = router

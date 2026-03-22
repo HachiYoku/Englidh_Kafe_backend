@@ -13,8 +13,6 @@ router.use((req, res, next) => {
 router.post('/register', register)
 
 router.get('/verify-email', verifyEmail)
-router.get('/verify-email/:token', verifyEmail)
-router.post('/verify-email', verifyEmail)
 
 router.post('/resend-verification', resendVerification)
 
@@ -22,7 +20,7 @@ router.post('/login', login)
 
 router.post('/forgot-password', forgotPassword)
 
-router.post('/reset-password', resetPassword)
+router.post('/reset-password/:token', resetPassword)
 
 
 
