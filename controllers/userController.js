@@ -7,6 +7,11 @@ const getProfile = async (req, res) => {
     return res.status(401).json({ message: "User is not authorized" });
   }
 
+  if (req.user.role === "admin") {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    return res.status(200).json(users);
+  }
+
   const user = await User.findById(req.user.id).select("-password");
 
   if (!user) {
@@ -39,11 +44,22 @@ const updateProfile = async (req, res) => {
   }
 };
 
-const deletAccount = async (req, res) => { }
+const deletAccount = async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
 
 module.exports = {
   getProfile,
   updateProfile,
   deletAccount}
-
 
