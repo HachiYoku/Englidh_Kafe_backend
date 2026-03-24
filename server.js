@@ -18,6 +18,9 @@ app.use('/user', userRoutes)
 const courseRoutes = require('./routes/course')
 app.use('/courses', courseRoutes)
 
+const lessonRoutes = require('./routes/lesson')
+app.use('/lessons', lessonRoutes)
+
 app.get('/', (req, res) => {
   res.send('Hello English Kafe!')
 })

@@ -1,4 +1,5 @@
 const Course = require("../models/courseModel");
+const Lesson = require("../models/lessonModel");
 const { uploadStream } = require("../services/uploadStream");
 
 const createCourse = async (req, res) => {
@@ -105,11 +106,14 @@ const updateCourse = async (req, res) => {
 
 const deleteCourse = async (req, res) => {
   try {
-    const course = await Course.findByIdAndDelete(req.params.id);
+    const course = await Course.findById(req.params.id);
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
+
+    await Lesson.deleteMany({ course: course._id });
+    await course.deleteOne();
 
     return res.status(200).json({ message: "Course deleted successfully" });
   } catch (error) {
