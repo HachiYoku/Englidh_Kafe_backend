@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const validateToken = require("../middleware/authMiddleware");
+const requireAdmin = require("../middleware/adminMiddleware");
 const {
   createCourse,
   getCourses,
@@ -11,14 +12,6 @@ const {
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
-
-const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ message: "Admin access only" });
-  }
-
-  next();
-};
 
 router.get("/", getCourses);
 router.get("/:id", getCourseById);

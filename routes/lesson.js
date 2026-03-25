@@ -1,5 +1,7 @@
 const express = require("express");
 const validateToken = require("../middleware/authMiddleware");
+const requireAdmin = require("../middleware/adminMiddleware");
+const requireEnrollment = require("../middleware/enrollmentMiddleware");
 const {
   createLesson,
   getLessonsByCourse,
@@ -9,15 +11,7 @@ const {
 
 const router = express.Router();
 
-const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ message: "Admin access only" });
-  }
-
-  next();
-};
-
-router.get("/course/:courseId", getLessonsByCourse);
+router.get("/course/:courseId", validateToken, requireEnrollment, getLessonsByCourse);
 router.post("/course/:courseId", validateToken, requireAdmin, createLesson);
 router.put("/:lessonId", validateToken, requireAdmin, updateLesson);
 router.delete("/:lessonId", validateToken, requireAdmin, deleteLesson);
