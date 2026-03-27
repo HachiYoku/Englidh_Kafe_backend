@@ -11,6 +11,12 @@ const courseSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    features: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     price: {
       type: Number,
       required: true,

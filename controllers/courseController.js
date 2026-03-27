@@ -2,9 +2,36 @@ const Course = require("../models/courseModel");
 const Lesson = require("../models/lessonModel");
 const { uploadStream } = require("../services/uploadStream");
 
+const parseFeatures = (input) => {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((feature) => String(feature).trim()).filter(Boolean);
+  }
+
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) {
+        return parsed.map((feature) => String(feature).trim()).filter(Boolean);
+      }
+    } catch (error) {
+      return input
+        .split(",")
+        .map((feature) => feature.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 const createCourse = async (req, res) => {
   try {
     const { title, description, price, rating, thumbnail, isPublished } = req.body;
+    const features = parseFeatures(req.body.features);
 
     if (!title || price === undefined) {
       return res.status(400).json({ message: "Title and price are required" });
@@ -26,6 +53,7 @@ const createCourse = async (req, res) => {
       title,
       description,
       price,
+      features: features || [],
       rating: rating || 0,
       thumbnail: thumbnailUrl,
       thumbnailPublicId,
@@ -74,6 +102,7 @@ const getCourseById = async (req, res) => {
 const updateCourse = async (req, res) => {
   try {
     const { title, description, price, rating, thumbnail, isPublished } = req.body;
+    const features = parseFeatures(req.body.features);
     const course = await Course.findById(req.params.id);
 
     if (!course) {
@@ -82,6 +111,7 @@ const updateCourse = async (req, res) => {
 
     if (title !== undefined) course.title = title;
     if (description !== undefined) course.description = description;
+    if (features !== undefined) course.features = features;
     if (price !== undefined) course.price = price;
     if (rating !== undefined) course.rating = rating;
     if (thumbnail !== undefined) course.thumbnail = thumbnail;
