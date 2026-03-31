@@ -4,6 +4,23 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const sendEmail = require('../services/sendEmail')
 
+const getAppUrl = (appName) => {
+  const isProduction = process.env.NODE_ENV === 'production'
+  const appKey = appName.toUpperCase()
+  const localUrl = process.env[`${appKey}_URL`]
+  const productionUrl = process.env[`${appKey}_URL_PROD`]
+
+  const selectedUrl = isProduction
+    ? productionUrl || localUrl
+    : localUrl || productionUrl
+
+  if (!selectedUrl) {
+    return appName === 'admin' ? 'http://localhost:5174' : 'http://localhost:5173'
+  }
+
+  return selectedUrl.replace(/\/$/, '')
+}
+
 const getBackendBaseUrl = (req) => {
   if (process.env.BACKEND_URL) {
     return process.env.BACKEND_URL.replace(/\/$/, '')
@@ -13,7 +30,7 @@ const getBackendBaseUrl = (req) => {
 }
 
 const getVerificationRedirectUrl = (status, message, email) => {
-  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")
+  const frontendUrl = getAppUrl('frontend')
   const redirectPath = status === 'error' ? '/verification-help' : '/login'
   const redirectUrl = new URL(redirectPath, frontendUrl)
 
@@ -255,7 +272,7 @@ const forgotPassword = async (req, res) => {
 
     // Send email
     const resetLink = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
+      getAppUrl('frontend')
     }/reset-password/${resetToken}`;
     const html = `
       <h3>Password Reset Request</h3>
