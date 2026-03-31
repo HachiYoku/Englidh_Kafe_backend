@@ -211,6 +211,10 @@ const login = async (req, res) => {
     return res.status(400).json({ message: "Email or password is incorrect or account does not exist" });
   }
 
+  if (!user.isActive) {
+    return res.status(403).json({ message: "This account is inactive. Please contact support or an administrator." });
+  }
+
   if (!user.isVerified) {
     return res.status(401).json({
       message: "Please verify your email before logging in",

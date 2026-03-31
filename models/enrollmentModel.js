@@ -17,7 +17,7 @@ const enrollmentSchema = new mongoose.Schema(
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }
