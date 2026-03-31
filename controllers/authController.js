@@ -191,7 +191,7 @@ const login = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.status(400).json({ message: "Account doesn't exist" });
+    return res.status(400).json({ message: "Email or password is incorrect or account does not exist" });
   }
 
   if (!user.isVerified) {
@@ -243,8 +243,7 @@ const forgotPassword = async (req, res) => {
     }
     const user = await User.findOne({ email });
     if (!user) {
-      // Avoid account enumeration; still respond OK
-      return res.json({ message: "Password reset link sent to your email" });
+      return res.status(404).json({ message: "Account does not exist. Register your account first." });
     }
     // Generate token
     const resetToken = crypto.randomBytes(20).toString("hex");
