@@ -4,6 +4,33 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const sendEmail = require('../services/sendEmail')
 
+const getBackendBaseUrl = (req) => {
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL.replace(/\/$/, '')
+  }
+
+  return `${req.protocol}://${req.get('host')}`
+}
+
+const getVerificationRedirectUrl = (status, message, email) => {
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")
+  const redirectPath = status === 'error' ? '/verification-help' : '/login'
+  const redirectUrl = new URL(redirectPath, frontendUrl)
+
+  if (status) {
+    redirectUrl.searchParams.set('verification', status)
+  }
+
+  if (message) {
+    redirectUrl.searchParams.set('message', message)
+  }
+
+  if (email) {
+    redirectUrl.searchParams.set('email', email)
+  }
+
+  return redirectUrl.toString()
+}
 
 const register = async (req, res) => {
   try {
@@ -32,8 +59,7 @@ const register = async (req, res) => {
       isVerified: false,
     });
     
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const verifyLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    const verifyLink = `${getBackendBaseUrl(req)}/auth/verify-email?token=${verificationToken}`;
 
     try {
       await sendEmail(
@@ -46,12 +72,18 @@ const register = async (req, res) => {
         `,
       );
     } catch (emailError) {
-      console.warn("Email failed but user registered:", emailError.message);
+      console.warn("Verification email failed after registration:", emailError.message);
+
+      return res.status(201).json({
+        message: "Registration successful, but we could not send the verification email right now. Please try resending it from the login page.",
+        emailSent: false,
+      });
     }
 
     //  return success
     return res.status(201).json({
       message: "Registration successful. Please verify your email.",
+      emailSent: true,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -64,27 +96,34 @@ const verifyEmail = async (req, res) => {
 
     // Check if token exists
     if (!token) {
-      return res.status(400).json({ message: "Verification token is missing" });
+      return res.redirect(
+        getVerificationRedirectUrl("error", "Verification token is missing")
+      );
     }
 
     console.log("Token received:", token);
 
     const user = await User.findOne({
       verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() },
     });
     console.log("User found:", user);
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid verification token" });
+      return res.redirect(
+        getVerificationRedirectUrl("error", "Invalid verification token")
+      );
     }
 
     if (user.verificationTokenExpires < Date.now()) {
-      return res.status(400).json({ message: "Verification token expired" });
+      return res.redirect(
+        getVerificationRedirectUrl("error", "Verification token expired", user.email)
+      );
     }
 
     if (user.isVerified) {
-      return res.status(400).json({ message: "Email already verified" });
+      return res.redirect(
+        getVerificationRedirectUrl("success", "Email already verified", user.email)
+      );
     }
 
     user.isVerified = true;
@@ -92,9 +131,13 @@ const verifyEmail = async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    return res.status(200).json({ message: "Email verified successfully" });
+    return res.redirect(
+      getVerificationRedirectUrl("success", "Email verified successfully", user.email)
+    );
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.redirect(
+      getVerificationRedirectUrl("error", error.message || "Email verification failed")
+    );
   }
 };
 
@@ -122,8 +165,7 @@ const resendVerification = async (req, res) => {
     user.verificationTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const verifyLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    const verifyLink = `${getBackendBaseUrl(req)}/auth/verify-email?token=${verificationToken}`;
 
     await sendEmail(
       user.email,
@@ -168,6 +210,29 @@ const login = async (req, res) => {
   });
 
   res.json({ accessToken: token });
+};
+
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar || null,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 const forgotPassword = async (req, res) => {
@@ -244,6 +309,7 @@ module.exports = {
   verifyEmail,
   resendVerification,
   login,
+  getCurrentUser,
   forgotPassword,
   resetPassword
 }
