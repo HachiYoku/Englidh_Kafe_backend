@@ -28,6 +28,23 @@ const parseFeatures = (input) => {
   return [];
 };
 
+const withLessonCount = async (course) => {
+  if (!course) {
+    return course;
+  }
+
+  const lessonCount = await Lesson.countDocuments({ course: course._id });
+
+  return {
+    ...course.toObject(),
+    lessonCount,
+  };
+};
+
+const withLessonCounts = async (courses) => {
+  return Promise.all(courses.map((course) => withLessonCount(course)));
+};
+
 const createCourse = async (req, res) => {
   try {
     const { title, description, price, rating, thumbnail, isPublished } = req.body;
@@ -72,7 +89,7 @@ const getCourses = async (req, res) => {
     const query = req.user?.role === "admin" ? {} : { isPublished: true };
     const courses = await Course.find(query).populate("createdBy", "name email");
 
-    return res.status(200).json(courses);
+    return res.status(200).json(await withLessonCounts(courses));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -93,7 +110,7 @@ const getCourseById = async (req, res) => {
       return res.status(403).json({ message: "You cannot access this course" });
     }
 
-    return res.status(200).json(course);
+    return res.status(200).json(await withLessonCount(course));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
