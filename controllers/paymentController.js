@@ -69,7 +69,7 @@ const getMyPayments = async (req, res) => {
 const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()
-      .populate("userId", "name email")
+      .populate("userId", "name email avatar")
       .populate("courseId", "title price")
       .populate("reviewedBy", "name email")
       .sort({ createdAt: -1 });
