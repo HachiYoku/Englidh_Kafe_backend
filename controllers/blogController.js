@@ -1,6 +1,8 @@
 const Blog = require("../models/blogModel");
 const { uploadStream } = require("../services/uploadStream");
 
+const BLOG_AUTHOR_FIELDS = "name email avatar";
+
 const createBlog = async (req, res) => {
   try {
     const { title, content, image } = req.body;
@@ -26,7 +28,9 @@ const createBlog = async (req, res) => {
       createdBy: req.user.id,
     });
 
-    return res.status(201).json(blog);
+    const populatedBlog = await Blog.findById(blog._id).populate("createdBy", BLOG_AUTHOR_FIELDS);
+
+    return res.status(201).json(populatedBlog);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -34,7 +38,7 @@ const createBlog = async (req, res) => {
 
 const getBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find().populate("createdBy", "name email").sort({ createdAt: -1 });
+    const blogs = await Blog.find().populate("createdBy", BLOG_AUTHOR_FIELDS).sort({ createdAt: -1 });
     return res.status(200).json(blogs);
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -43,7 +47,7 @@ const getBlogs = async (req, res) => {
 
 const getBlogById = async (req, res) => {
   try {
-    const blog = await Blog.findById(req.params.id).populate("createdBy", "name email");
+    const blog = await Blog.findById(req.params.id).populate("createdBy", BLOG_AUTHOR_FIELDS);
 
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
@@ -76,7 +80,9 @@ const updateBlog = async (req, res) => {
 
     await blog.save();
 
-    return res.status(200).json(blog);
+    const populatedBlog = await Blog.findById(blog._id).populate("createdBy", BLOG_AUTHOR_FIELDS);
+
+    return res.status(200).json(populatedBlog);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
