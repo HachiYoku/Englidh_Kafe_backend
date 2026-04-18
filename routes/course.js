@@ -13,11 +13,15 @@ const {
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const courseUpload = upload.fields([
+  { name: "thumbnail", maxCount: 1 },
+  { name: "paymentQr", maxCount: 1 },
+]);
 
 router.get("/", attachUserIfPresent, getCourses);
 router.get("/:id", attachUserIfPresent, getCourseById);
-router.post("/", validateToken, requireAdmin, upload.single("thumbnail"), createCourse);
-router.put("/:id", validateToken, requireAdmin, upload.single("thumbnail"), updateCourse);
+router.post("/", validateToken, requireAdmin, courseUpload, createCourse);
+router.put("/:id", validateToken, requireAdmin, courseUpload, updateCourse);
 router.delete("/:id", validateToken, requireAdmin, deleteCourse);
 
 module.exports = router;

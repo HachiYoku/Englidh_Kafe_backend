@@ -36,6 +36,14 @@ const courseSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    paymentQr: {
+      type: String,
+      trim: true,
+    },
+    paymentQrPublicId: {
+      type: String,
+      trim: true,
+    },
     isPublished: {
       type: Boolean,
       default: false,

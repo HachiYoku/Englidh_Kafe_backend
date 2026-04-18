@@ -45,9 +45,17 @@ const withLessonCounts = async (courses) => {
   return Promise.all(courses.map((course) => withLessonCount(course)));
 };
 
+const getUploadedFile = (req, fieldName) => {
+  if (!req.files || !req.files[fieldName]) {
+    return null;
+  }
+
+  return req.files[fieldName][0] || null;
+};
+
 const createCourse = async (req, res) => {
   try {
-    const { title, description, price, rating, thumbnail, isPublished } = req.body;
+    const { title, description, price, rating, thumbnail, paymentQr, isPublished } = req.body;
     const features = parseFeatures(req.body.features);
 
     if (!title || price === undefined) {
@@ -56,14 +64,28 @@ const createCourse = async (req, res) => {
 
     let thumbnailUrl = thumbnail;
     let thumbnailPublicId;
+    let paymentQrUrl = paymentQr;
+    let paymentQrPublicId;
 
-    if (req.file?.buffer) {
+    const thumbnailFile = getUploadedFile(req, "thumbnail");
+    const paymentQrFile = getUploadedFile(req, "paymentQr");
+
+    if (thumbnailFile?.buffer) {
       const result = await uploadStream(
-        req.file.buffer,
+        thumbnailFile.buffer,
         "english_kafe/course_thumbnails"
       );
       thumbnailUrl = result.secure_url;
       thumbnailPublicId = result.public_id;
+    }
+
+    if (paymentQrFile?.buffer) {
+      const result = await uploadStream(
+        paymentQrFile.buffer,
+        "english_kafe/course_payment_qr_codes"
+      );
+      paymentQrUrl = result.secure_url;
+      paymentQrPublicId = result.public_id;
     }
 
     const course = await Course.create({
@@ -74,6 +96,8 @@ const createCourse = async (req, res) => {
       rating: rating || 0,
       thumbnail: thumbnailUrl,
       thumbnailPublicId,
+      paymentQr: paymentQrUrl,
+      paymentQrPublicId,
       isPublished,
       createdBy: req.user.id,
     });
@@ -118,7 +142,7 @@ const getCourseById = async (req, res) => {
 
 const updateCourse = async (req, res) => {
   try {
-    const { title, description, price, rating, thumbnail, isPublished } = req.body;
+    const { title, description, price, rating, thumbnail, paymentQr, isPublished } = req.body;
     const features = parseFeatures(req.body.features);
     const course = await Course.findById(req.params.id);
 
@@ -132,15 +156,28 @@ const updateCourse = async (req, res) => {
     if (price !== undefined) course.price = price;
     if (rating !== undefined) course.rating = rating;
     if (thumbnail !== undefined) course.thumbnail = thumbnail;
+    if (paymentQr !== undefined) course.paymentQr = paymentQr;
     if (isPublished !== undefined) course.isPublished = isPublished;
 
-    if (req.file?.buffer) {
+    const thumbnailFile = getUploadedFile(req, "thumbnail");
+    const paymentQrFile = getUploadedFile(req, "paymentQr");
+
+    if (thumbnailFile?.buffer) {
       const result = await uploadStream(
-        req.file.buffer,
+        thumbnailFile.buffer,
         "english_kafe/course_thumbnails"
       );
       course.thumbnail = result.secure_url;
       course.thumbnailPublicId = result.public_id;
+    }
+
+    if (paymentQrFile?.buffer) {
+      const result = await uploadStream(
+        paymentQrFile.buffer,
+        "english_kafe/course_payment_qr_codes"
+      );
+      course.paymentQr = result.secure_url;
+      course.paymentQrPublicId = result.public_id;
     }
 
     await course.save();

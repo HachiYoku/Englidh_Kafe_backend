@@ -56,6 +56,9 @@ app.use('/lessons', lessonRoutes)
 const paymentRoutes = require('./routes/payment')
 app.use('/payments', paymentRoutes)
 
+const paymentSettingsRoutes = require('./routes/paymentSettings')
+app.use('/payment-settings', paymentSettingsRoutes)
+
 const enrollmentRoutes = require('./routes/enrollment')
 app.use('/enrollments', enrollmentRoutes)
 
