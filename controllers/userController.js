@@ -2,7 +2,10 @@ const User = require("../models/userModel");
 const Course = require("../models/courseModel");
 const Enrollment = require("../models/enrollmentModel");
 const Payment = require("../models/paymentModel");
+const mongoose = require("mongoose");
 const { uploadStream } = require("../services/uploadStream");
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const getAdminUsersWithEnrollments = async () => {
   const users = await User.find({ role: "user" }).select("-password").sort({ createdAt: -1 });
@@ -12,6 +15,10 @@ const getAdminUsersWithEnrollments = async () => {
   const userCourseMap = new Map();
 
   for (const enrollment of enrollments) {
+    if (!enrollment.courseId?._id) {
+      continue;
+    }
+
     const userId = String(enrollment.userId);
     const currentCourses = userCourseMap.get(userId) || [];
     currentCourses.push({
@@ -117,13 +124,22 @@ const updateUserCourseAccess = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const uniqueCourseIds = [...new Set(courseIds.map(String))];
+    const uniqueCourseIds = [
+      ...new Set(
+        courseIds
+          .map((courseId) => String(courseId))
+          .filter((courseId) => courseId && courseId !== "null" && courseId !== "undefined" && isValidObjectId(courseId))
+      ),
+    ];
+
     const validCourses = await Course.find({ _id: { $in: uniqueCourseIds } }).select("_id");
     const validCourseIds = validCourses.map((course) => String(course._id));
 
     const existingEnrollments = await Enrollment.find({ userId: user._id });
     const existingByCourseId = new Map(
-      existingEnrollments.map((enrollment) => [String(enrollment.courseId), enrollment])
+      existingEnrollments
+        .filter((enrollment) => enrollment.courseId && isValidObjectId(enrollment.courseId))
+        .map((enrollment) => [String(enrollment.courseId), enrollment])
     );
 
     for (const courseId of validCourseIds) {
@@ -136,7 +152,7 @@ const updateUserCourseAccess = async (req, res) => {
     }
 
     for (const enrollment of existingEnrollments) {
-      if (!validCourseIds.includes(String(enrollment.courseId))) {
+      if (!enrollment.courseId || !isValidObjectId(enrollment.courseId) || !validCourseIds.includes(String(enrollment.courseId))) {
         await enrollment.deleteOne();
       }
     }

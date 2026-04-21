@@ -1,5 +1,6 @@
 const Course = require("../models/courseModel");
 const Lesson = require("../models/lessonModel");
+const Enrollment = require("../models/enrollmentModel");
 const { uploadStream } = require("../services/uploadStream");
 
 const parseFeatures = (input) => {
@@ -28,21 +29,25 @@ const parseFeatures = (input) => {
   return [];
 };
 
-const withLessonCount = async (course) => {
+const withCourseMeta = async (course) => {
   if (!course) {
     return course;
   }
 
-  const lessonCount = await Lesson.countDocuments({ course: course._id });
+  const [lessonCount, enrollmentCount] = await Promise.all([
+    Lesson.countDocuments({ course: course._id }),
+    Enrollment.countDocuments({ courseId: course._id }),
+  ]);
 
   return {
     ...course.toObject(),
     lessonCount,
+    enrollmentCount,
   };
 };
 
-const withLessonCounts = async (courses) => {
-  return Promise.all(courses.map((course) => withLessonCount(course)));
+const withCourseMetaList = async (courses) => {
+  return Promise.all(courses.map((course) => withCourseMeta(course)));
 };
 
 const getUploadedFile = (req, fieldName) => {
@@ -113,7 +118,7 @@ const getCourses = async (req, res) => {
     const query = req.user?.role === "admin" ? {} : { isPublished: true };
     const courses = await Course.find(query).populate("createdBy", "name email");
 
-    return res.status(200).json(await withLessonCounts(courses));
+    return res.status(200).json(await withCourseMetaList(courses));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -134,7 +139,7 @@ const getCourseById = async (req, res) => {
       return res.status(403).json({ message: "You cannot access this course" });
     }
 
-    return res.status(200).json(await withLessonCount(course));
+    return res.status(200).json(await withCourseMeta(course));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
