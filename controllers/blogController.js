@@ -1,7 +1,18 @@
 const Blog = require("../models/blogModel");
 const { uploadStream } = require("../services/uploadStream");
+const sanitizeHtmlContent = require("../utils/sanitizeHtmlContent");
 
 const BLOG_AUTHOR_FIELDS = "name email avatar";
+
+const sanitizeBlogPayload = (blog) => {
+  if (!blog) {
+    return blog;
+  }
+
+  const normalizedBlog = typeof blog.toObject === "function" ? blog.toObject() : { ...blog };
+  normalizedBlog.content = sanitizeHtmlContent(normalizedBlog.content || "");
+  return normalizedBlog;
+};
 
 const createBlog = async (req, res) => {
   try {
@@ -22,7 +33,7 @@ const createBlog = async (req, res) => {
 
     const blog = await Blog.create({
       title,
-      content,
+      content: sanitizeHtmlContent(content),
       image: imageUrl,
       imagePublicId,
       createdBy: req.user.id,
@@ -30,7 +41,7 @@ const createBlog = async (req, res) => {
 
     const populatedBlog = await Blog.findById(blog._id).populate("createdBy", BLOG_AUTHOR_FIELDS);
 
-    return res.status(201).json(populatedBlog);
+    return res.status(201).json(sanitizeBlogPayload(populatedBlog));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -39,7 +50,7 @@ const createBlog = async (req, res) => {
 const getBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find().populate("createdBy", BLOG_AUTHOR_FIELDS).sort({ createdAt: -1 });
-    return res.status(200).json(blogs);
+    return res.status(200).json(blogs.map(sanitizeBlogPayload));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -53,7 +64,7 @@ const getBlogById = async (req, res) => {
       return res.status(404).json({ message: "Blog not found" });
     }
 
-    return res.status(200).json(blog);
+    return res.status(200).json(sanitizeBlogPayload(blog));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -69,7 +80,7 @@ const updateBlog = async (req, res) => {
     }
 
     if (title !== undefined) blog.title = title;
-    if (content !== undefined) blog.content = content;
+    if (content !== undefined) blog.content = sanitizeHtmlContent(content);
     if (image !== undefined) blog.image = image;
 
     if (req.file?.buffer) {
@@ -82,7 +93,7 @@ const updateBlog = async (req, res) => {
 
     const populatedBlog = await Blog.findById(blog._id).populate("createdBy", BLOG_AUTHOR_FIELDS);
 
-    return res.status(200).json(populatedBlog);
+    return res.status(200).json(sanitizeBlogPayload(populatedBlog));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

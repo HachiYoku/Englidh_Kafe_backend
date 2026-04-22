@@ -1,8 +1,8 @@
 const express = require("express");
-const multer = require("multer");
 const validateToken = require("../middleware/authMiddleware");
 const { attachUserIfPresent } = require("../middleware/authMiddleware");
 const requireAdmin = require("../middleware/adminMiddleware");
+const { createImageUpload } = require("../middleware/uploadValidation");
 const {
   createCourse,
   getCourses,
@@ -12,7 +12,7 @@ const {
 } = require("../controllers/courseController");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = createImageUpload();
 const courseUpload = upload.fields([
   { name: "thumbnail", maxCount: 1 },
   { name: "paymentQr", maxCount: 1 },

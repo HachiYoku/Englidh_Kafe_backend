@@ -1,7 +1,7 @@
 const express = require("express");
-const multer = require("multer");
 const validateToken = require("../middleware/authMiddleware");
 const requireAdmin = require("../middleware/adminMiddleware");
+const { createImageUpload } = require("../middleware/uploadValidation");
 const {
   createBlog,
   getBlogs,
@@ -11,7 +11,7 @@ const {
 } = require("../controllers/blogController");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = createImageUpload();
 
 router.get("/", getBlogs);
 router.get("/:id", getBlogById);

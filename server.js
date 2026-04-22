@@ -1,8 +1,16 @@
 const express = require('express')
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require('dotenv').config();
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express()
 const port = process.env.PORT || 3000
+const trustProxy = process.env.TRUST_PROXY
+
+if (trustProxy) {
+  app.set('trust proxy', trustProxy === 'true' ? 1 : trustProxy)
+}
 
 const allowedOrigins = [
   process.env.FRONTEND_URL_LOCAL || 'http://localhost:5173',
@@ -12,6 +20,13 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.ADMIN_URL,
 ].filter(Boolean)
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+)
 
 app.use((req, res, next) => {
   const origin = req.headers.origin
@@ -36,7 +51,18 @@ app.use((req, res, next) => {
   return res.status(403).json({ message: 'Origin is not allowed by CORS' })
 })
 
-app.use(express.json())
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests. Please try again later." },
+  })
+)
+
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 const connectDB = require("./config/dbConnection");
 connectDB();
@@ -68,6 +94,8 @@ app.use('/blogs', blogRoutes)
 app.get('/', (req, res) => {
   res.send('Hello English Kafe!')
 })
+
+app.use(errorHandler)
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)

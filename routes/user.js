@@ -1,16 +1,10 @@
 const express = require('express');
-const multer = require('multer');
 const router = express.Router();
 const validateToken = require('../middleware/authMiddleware');
 const requireAdmin = require('../middleware/adminMiddleware');
+const { createImageUpload } = require("../middleware/uploadValidation");
 const { getProfile, updateProfile, deletAccount, updateUserStatus, updateUserCourseAccess } = require('../controllers/userController');
-const upload = multer({ storage: multer.memoryStorage() });
-
-// middleware that is specific to this router
-router.use((req, res, next) => {
- console.log('Time: ', Date.now())
- next()
-})
+const upload = createImageUpload();
 
 
 router.get('/', validateToken, getProfile)

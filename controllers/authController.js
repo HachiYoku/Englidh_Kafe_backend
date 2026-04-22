@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const sendEmail = require('../services/sendEmail')
 
+const GENERIC_LOGIN_ERROR_MESSAGE = "Invalid email, password, or account status";
+const GENERIC_PASSWORD_RESET_MESSAGE = "If that email exists, a password reset link has been sent";
+
 const getAppUrl = (appName) => {
   const isProduction = process.env.NODE_ENV === 'production'
   const appKey = appName.toUpperCase()
@@ -118,12 +121,9 @@ const verifyEmail = async (req, res) => {
       );
     }
 
-    console.log("Token received:", token);
-
     const user = await User.findOne({
       verificationToken: token,
     });
-    console.log("User found:", user);
 
     if (!user) {
       return res.redirect(
@@ -208,22 +208,22 @@ const login = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.status(400).json({ message: "Email or password is incorrect or account does not exist" });
+    return res.status(401).json({ message: GENERIC_LOGIN_ERROR_MESSAGE });
   }
 
   if (!user.isActive) {
-    return res.status(403).json({ message: "This account is inactive. Please contact support or an administrator." });
+    return res.status(401).json({ message: GENERIC_LOGIN_ERROR_MESSAGE });
   }
 
   if (!user.isVerified) {
     return res.status(401).json({
-      message: "Please verify your email before logging in",
+      message: GENERIC_LOGIN_ERROR_MESSAGE,
     });
   }
 
   const isMatch = bcrypt.compareSync(password, user.password);
   if (!isMatch) {
-    return res.status(400).json({ message: "Invalid credentials" });
+    return res.status(401).json({ message: GENERIC_LOGIN_ERROR_MESSAGE });
   }
 
   const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -264,7 +264,7 @@ const forgotPassword = async (req, res) => {
     }
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "Account does not exist. Register your account first." });
+      return res.status(200).json({ message: GENERIC_PASSWORD_RESET_MESSAGE });
     }
     // Generate token
     const resetToken = crypto.randomBytes(20).toString("hex");
@@ -287,9 +287,10 @@ const forgotPassword = async (req, res) => {
 
     await sendEmail(user.email, "Password Reset", html);
 
-    res.json({ message: "Password reset link sent to your email" });
+    res.json({ message: GENERIC_PASSWORD_RESET_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Email sending failed", error });
+    console.error("Password reset email failed:", error.message);
+    res.status(500).json({ message: "Unable to process the password reset request right now" });
   }
 };
 
@@ -320,7 +321,8 @@ const resetPassword = async (req, res) => {
     await user.save();
     res.json({ message: "Password has been reset successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Password reset failed:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

@@ -1,7 +1,7 @@
 const express = require("express");
-const multer = require("multer");
 const validateToken = require("../middleware/authMiddleware");
 const requireAdmin = require("../middleware/adminMiddleware");
+const { createImageUpload } = require("../middleware/uploadValidation");
 const {
   createPayment,
   getMyPayments,
@@ -11,7 +11,7 @@ const {
 } = require("../controllers/paymentController");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = createImageUpload();
 
 router.get("/my", validateToken, getMyPayments);
 router.get("/", validateToken, requireAdmin, getAllPayments);
